@@ -1,0 +1,13 @@
+[package]
+name = "server-manager"
+version = "0.1.0"
+authors = ["Rasmus Eneman <pie.or.paj@gmail.com>"]
+build = "build.rs" 
+
+[dependencies]
+clap = "~2.19.0"
+inquirer = { git = "https://github.com/Munksgaard/inquirer-rs" }
+yaml-rust = "*"
+
+[build-dependencies]
+clap = "~2.19.0"
