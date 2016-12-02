@@ -8,8 +8,10 @@ extern crate clap;
 extern crate inquirer;
 extern crate yaml_rust;
 
+use std::iter::Iterator;
+use clap::ArgMatches;
 use cli_interface::select_item;
-use config::{Configuration, Environment, parse_configuration_file};
+use config::{Configuration, Environment, Task, parse_configuration_file};
 use services::service::{enter_ssh, run_command, run_task};
 
 fn main() {
@@ -34,15 +36,26 @@ fn main() {
 
     if let Some(_) = matches.subcommand_matches("list") {
         list_environments(config)
-    } else if let Some(_) = matches.subcommand_matches("ssh") {
-        let environment = select_environment(&config);
+    } else if let Some(matches) = matches.subcommand_matches("ssh") {
+        let environment = get_environment(&config, &matches);
         enter_ssh(&environment.service).unwrap();
-    } else if let Some(_) = matches.subcommand_matches("cmd") {
-        let environment = select_environment(&config);
-        run_command(&environment.service, "ls").unwrap();
-    } else if let Some(_) = matches.subcommand_matches("run") {
-        let environment = select_environment(&config);
-        let task = select_item("Choose task:", environment.tasks.iter().collect());
+    } else if let Some(matches) = matches.subcommand_matches("cmd") {
+        let environment = get_environment(&config, &matches);
+        match matches.subcommand() {
+            (external, Some(matches)) => {
+                let args: Vec<&str> = matches.values_of("")
+                    .map_or_else(Vec::new, Iterator::collect);
+                let cmd = format!("{} {}", external, args.join(" "));
+                run_command(&environment.service, &cmd).unwrap();
+            }
+            _ => {
+                println!("No command specified");
+                std::process::exit(1);
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("run") {
+        let environment = get_environment(&config, &matches);
+        let task = get_task(&environment, &matches);
         run_task(&environment.service, &task).unwrap();
     }
 }
@@ -57,6 +70,36 @@ fn list_environments(config: Configuration) {
         for (name, _) in environment.tasks {
             println!("  - {}", name);
         }
+    }
+}
+
+fn get_environment<'a>(config: &'a Configuration, matchers: &'a ArgMatches) -> &'a Environment {
+    match matchers.value_of("environment") {
+        Some(environment) => {
+            match config.environments.get(environment) {
+                Some(environment) => environment,
+                None => {
+                    println!("Invalid environment {}", environment);
+                    std::process::exit(1);
+                }
+            }
+        }
+        None => select_environment(config),
+    }
+}
+
+fn get_task<'a>(environment: &'a Environment, matchers: &'a ArgMatches) -> &'a Task {
+    match matchers.value_of("task") {
+        Some(task) => {
+            match environment.tasks.get(task) {
+                Some(task) => task,
+                None => {
+                    println!("Invalid task {}", task);
+                    std::process::exit(1);
+                }
+            }
+        }
+        None => select_item("Choose task:", environment.tasks.iter().collect()),
     }
 }
 
