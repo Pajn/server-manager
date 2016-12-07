@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::io;
 use std::io::Read;
+use std::string::String;
 use yaml_rust::{ScanError, Yaml, YamlLoader};
 use yaml_rust::yaml::Hash;
 
@@ -61,6 +62,7 @@ fn parse_ssh_configuration(config: &Yaml) -> Result<SshConfiguration, Error> {
                 .map(|p| p as u16),
             key_file: config.get(&Yaml::String("key_file".to_owned()))
                 .and_then(Yaml::as_str)
+                .map(|key_file| key_file.trim())
                 .map(Into::into),
             user: config.get(&Yaml::String("user".to_owned()))
                 .and_then(Yaml::as_str)

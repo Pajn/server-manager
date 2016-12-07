@@ -17,7 +17,7 @@ impl SshConfiguration {
         }
 
         if let Some(ref key_file) = self.key_file {
-            command.arg(format!("-i {}", key_file));
+            command.arg(format!("-i{}", key_file));
         }
 
         command
